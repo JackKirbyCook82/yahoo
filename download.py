@@ -16,18 +16,18 @@ from datetime import datetime as Datetime
 from datetime import timedelta as Timedelta
 
 MAIN = os.path.dirname(os.path.realpath(__file__))
-MODULE = os.path.abspath(os.path.join(MAIN, os.pardir))
-ROOT = os.path.abspath(os.path.join(MODULE, os.pardir))
+PROJ = os.path.abspath(os.path.join(MAIN, os.pardir))
+ROOT = os.path.abspath(os.path.join(PROJ, os.pardir))
 if ROOT not in sys.path:
     sys.path.append(ROOT)
-CHROME = os.path.join(ROOT, "resources", "chromedriver.exe")
-SAVE = os.path.join(ROOT, "save", "history")
+SAVE = os.path.join(ROOT, "Library", "repository")
+CHROME = os.path.join(ROOT, "Library", "resources", "chromedriver.exe")
 
 from webscraping.webdrivers import WebDriver
-from utilities.synchronize import Queue, Consumer
+from support.synchronize import Queue, Consumer
+from finance.securities import DateRange, HistorySaver
 
-from finance.yahoo.history import YahooHistoryDownloader
-from finance.calculations.securities import DateRange, HistorySaver
+from history import YahooHistoryDownloader
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"

@@ -12,8 +12,9 @@ import pandas as pd
 from datetime import datetime as Datetime
 
 from webscraping.weburl import WebURL
+from webscraping.webnodes import WebHTML
 from webscraping.webpages import WebBrowserPage
-from utilities.pipelines import Downloader
+from support.pipelines import Downloader
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
@@ -55,15 +56,15 @@ class YahooHistoryData(WebHTML.Table, locator=r"//table[@data-test='historical-p
         return dataset
 
 
-class YahooHistoryPage(WebBrowserPage, reader=YahooHistoryData):
+class YahooHistoryPage(WebBrowserPage):
     def execute(self, *args, **kwargs):
-        table = YahooHistoryData(self.html)(*args, **kwargs)
+        table = YahooHistoryData(self.source)(*args, **kwargs)
         if table.empty:
             return
         current, updated = 0, len(table)
         while updated != current:
             self.pageEnd()
-            table = YahooHistoryData(self.html)(*args, **kwargs)
+            table = YahooHistoryData(self.source)(*args, **kwargs)
             current, updated = updated, len(table)
 
 
@@ -71,8 +72,9 @@ class YahooHistoryDownloader(Downloader, pages={"history": YahooHistoryData}):
     def execute(self, ticker, *args, history, **kwargs):
         curl = YahooHistoryURL(ticker=ticker, history=history)
         self.pages["history"].load(str(curl))
-        self.pages["history"].run()
-        history = self.pages["history"].read(ticker=ticker)
+        self.pages["history"].run(ticker=ticker)
+        source = self.pages["history"].source
+        history = YahooHistoryData(source)(ticker=ticker)
         yield ticker, history
 
 
