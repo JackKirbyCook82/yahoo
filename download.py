@@ -20,7 +20,7 @@ PROJ = os.path.abspath(os.path.join(MAIN, os.pardir))
 ROOT = os.path.abspath(os.path.join(PROJ, os.pardir))
 if ROOT not in sys.path:
     sys.path.append(ROOT)
-SAVE = os.path.join(ROOT, "Library", "repository")
+SAVE = os.path.join(ROOT, "Library", "repository", "history")
 CHROME = os.path.join(ROOT, "Library", "resources", "chromedriver.exe")
 
 from webscraping.webdrivers import WebDriver
