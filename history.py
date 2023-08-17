@@ -12,7 +12,7 @@ import pandas as pd
 from datetime import datetime as Datetime
 
 from webscraping.weburl import WebURL
-from webscraping.webnodes import WebHTML
+from webscraping.webdatas import WebHTML
 from webscraping.webpages import WebBrowserPage
 from support.pipelines import Downloader
 
@@ -39,7 +39,7 @@ class YahooHistoryURL(WebURL):
 
 class YahooHistoryData(WebHTML.Table, locator=r"//table[@data-test='historical-prices']", parameters={"index": None, "header": 0}):
     @staticmethod
-    def parser(dataframe, *args, ticker, **kwargs):
+    def execute(dataframe, *args, ticker, **kwargs):
         dataframe = dataframe.iloc[:-1, :]
         dataframe.columns = [str(column).replace("*", "").lower() for column in dataframe.columns]
         dataframe = dataframe.rename(columns={"adj close": "price"}, inplace=False)
