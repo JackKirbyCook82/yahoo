@@ -25,10 +25,10 @@ CHROME = os.path.join(ROOT, "Library", "resources", "chromedriver.exe")
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 
-from finance.historicals import HistorySaver, HistoryFile
-from finance.variables import DateRange
+from finance.variables import DateRange, Contract
+from finance.technicals import HistoryFile
 from webscraping.webdrivers import WebDriver, WebBrowser
-from support.files import Archive, FileTiming, FileTyping
+from support.files import Saver, Archive, FileTiming, FileTyping
 from support.synchronize import SideThread
 
 from history import YahooHistoryDownloader
@@ -53,15 +53,16 @@ class YahooDriver(WebDriver, browser=WebBrowser.CHROME, executable=CHROME, delay
 
 
 def history(reader, archive, *args, tickers, dates, **kwargs):
-    history_downloader = YahooHistoryDownloader(name="HistoryBarDownloader", feed=reader)
-    history_saver = HistorySaver(name="HistoryBarSaver", destination=archive, mode="a")
+    history_folder = lambda query: str(query["contract"].tostring(delimiter="_"))
+    history_downloader = YahooHistoryDownloader(name="HistoryDownloader", feed=reader)
+    history_saver = Saver(name="HistorySaver", destination=archive, folder=history_folder, mode="a")
     history_pipeline = history_downloader + history_saver
-    history_thread = SideThread(history_pipeline, name="HistoryBarThread")
+    history_thread = SideThread(history_pipeline, name="HistoryThread")
     history_thread.setup(tickers=tickers, dates=dates)
     return history_thread
 
 def main(*args, **kwargs):
-    history_file = HistoryFile(name="HistoryBarFile", typing=FileTyping.CSV, timing=FileTiming.EAGER, duplicates=False)
+    history_file = HistoryFile(name="HistoryFile", typing=FileTyping.CSV, timing=FileTiming.EAGER, duplicates=False)
     history_archive = Archive(name="HistoryArchive", repository=HISTORY, save=[history_file])
     with YahooDriver(name="HistoryReader") as history_reader:
         history_thread = history(history_reader, history_archive, *args, **kwargs)
