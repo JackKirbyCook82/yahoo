@@ -67,7 +67,7 @@ class YahooHistoryPage(WebBrowserPage):
 
 class YahooHistoryDownloader(Downloader, Processor, pages={"history": YahooHistoryPage}):
     def execute(self, query, *args, dates, **kwargs):
-        ticker = query["contract"].ticker
+        ticker = query["ticker"]
         bars = self.pages["history"](ticker, *args, dates=dates, **kwargs)
         bars = bars.reset_index(drop=True, inplace=False)
         yield query | dict(historicals=bars)
