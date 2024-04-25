@@ -19,16 +19,16 @@ MAIN = os.path.dirname(os.path.realpath(__file__))
 PROJECT = os.path.abspath(os.path.join(MAIN, os.pardir))
 ROOT = os.path.abspath(os.path.join(PROJECT, os.pardir))
 REPOSITORY = os.path.join(ROOT, "Library", "repository")
-HISTORY = os.path.join(REPOSITORY, "history")
+BARS = os.path.join(REPOSITORY, "history", "bars")
 TICKERS = os.path.join(ROOT, "AlgoTrading", "tickers.txt")
 CHROME = os.path.join(ROOT, "Library", "resources", "chromedriver.exe")
 if ROOT not in sys.path:
     sys.path.append(ROOT)
 
 from finance.variables import DateRange
-from finance.technicals import HistoryFile
+from finance.technicals import BarFile
 from webscraping.webdrivers import WebDriver, WebBrowser
-from support.files import Saver, FileTiming, FileTyping
+from support.files import Saver, Timing, Typing
 from support.queues import Schedule, Queues
 from support.synchronize import SideThread
 
@@ -53,11 +53,10 @@ class YahooDriver(WebDriver, browser=WebBrowser.CHROME, executable=CHROME, delay
 class TickerQueue(Queues.FIFO, variable="ticker"): pass
 
 
-def history(tickers, reader, historicals, *args, dates, parameters, **kwargs):
-    history_folder = lambda contents: str(contents["contract"].tostring(delimiter="_"))
-    history_schedule = Schedule(name="HistorySchedule", source=tickers)
+def history(source, reader, destination, *args, dates, parameters, **kwargs):
+    history_schedule = Schedule(name="HistorySchedule", source=source)
     history_downloader = YahooHistoryDownloader(name="HistoryDownloader", feed=reader)
-    history_saver = Saver(name="HistorySaver", destination=historicals, folder=history_folder, mode="a")
+    history_saver = Saver(name="HistorySaver", destination=destination, query="ticker")
     history_pipeline = history_schedule + history_downloader + history_saver
     history_thread = SideThread(history_pipeline, name="HistoryThread")
     history_thread.setup(dates=dates, **parameters)
@@ -65,10 +64,11 @@ def history(tickers, reader, historicals, *args, dates, parameters, **kwargs):
 
 
 def main(*args, tickers, **kwargs):
+    ticker_query = lambda ticker: str(ticker).upper()
     ticker_queue = TickerQueue(name="TickerQueue", contents=list(tickers), capacity=None)
-    history_file = HistoryFile(name="HistoryFile", repository=HISTORY, typing=FileTyping.CSV, timing=FileTiming.EAGER, duplicates=False)
+    bars_file = BarFile(name="BarFile", repository=BARS, query=ticker_query, typing=Typing.CSV, timing=Timing.EAGER, duplicates=False)
     with YahooDriver(name="HistoryReader") as history_reader:
-        history_thread = history(ticker_queue, history_reader, history_file, *args, **kwargs)
+        history_thread = history(ticker_queue, history_reader, {bars_file: "w"}, *args, **kwargs)
         history_thread.start()
         history_thread.join()
 

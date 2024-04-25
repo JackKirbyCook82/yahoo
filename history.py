@@ -53,6 +53,7 @@ class YahooHistoryPage(WebBrowserPage):
         self.pageend()
         content = YahooHistoryData(self.source)
         table = content(*args, **kwargs)
+        table = self.bars(table, *args, ticker=ticker, **kwargs)
         return table[columns]
 
     @staticmethod
@@ -70,7 +71,7 @@ class YahooHistoryDownloader(Downloader, Processor, pages={"history": YahooHisto
         ticker = query["ticker"]
         bars = self.pages["history"](ticker, *args, dates=dates, **kwargs)
         bars = bars.reset_index(drop=True, inplace=False)
-        yield query | dict(historicals=bars)
+        yield query | dict(bars=bars)
 
 
 
