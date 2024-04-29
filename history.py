@@ -13,7 +13,6 @@ from datetime import datetime as Datetime
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.processes import Downloader
 from support.pipelines import Processor
 
 __version__ = "1.0.0"
@@ -66,12 +65,18 @@ class YahooHistoryPage(WebBrowserPage):
         return dataframe
 
 
-class YahooHistoryDownloader(Downloader, Processor, pages={"history": YahooHistoryPage}):
+class YahooHistoryDownloader(Processor):
+    def __init__(self, *args, feed, name=None, **kwargs):
+        super().__init__(*args, name=name, **kwargs)
+        self.__history = YahooHistoryPage(*args, feed=feed, **kwargs)
+
     def execute(self, query, *args, dates, **kwargs):
         ticker = query["ticker"]
-        bars = self.pages["history"](ticker, *args, dates=dates, **kwargs)
+        bars = self.history(ticker, *args, dates=dates, **kwargs)
         bars = bars.reset_index(drop=True, inplace=False)
         yield query | dict(bars=bars)
 
+    @property
+    def history(self): return self.__history
 
 
