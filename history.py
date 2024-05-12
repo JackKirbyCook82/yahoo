@@ -46,13 +46,14 @@ class YahooHistoryURL(WebURL):
 class YahooHistoryData(WebHTML.Table, locator=history_locator, key="history", parser=history_parser): pass
 class YahooHistoryPage(WebBrowserPage):
     def __call__(self, ticker, *args, dates, **kwargs):
-        columns = ["ticker", "date", "open", "close", "high", "low", "price"]
+        columns = ["ticker", "open", "close", "high", "low", "price"]
         curl = YahooHistoryURL(ticker=ticker, dates=dates)
         self.load(str(curl.address), params=dict(curl.query))
         self.pageend()
         content = YahooHistoryData(self.source)
         table = content(*args, **kwargs)
         table = self.bars(table, *args, ticker=ticker, **kwargs)
+        table = table.set_index("date", drop=True, inplace=False)
         return table[columns]
 
     @staticmethod
@@ -73,7 +74,6 @@ class YahooHistoryDownloader(Processor):
     def execute(self, query, *args, dates, **kwargs):
         ticker = query["ticker"]
         bars = self.history(ticker, *args, dates=dates, **kwargs)
-        bars = bars.reset_index(drop=True, inplace=False)
         yield query | dict(bars=bars)
 
     @property
