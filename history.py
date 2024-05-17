@@ -45,16 +45,19 @@ class YahooHistoryURL(WebURL):
 
 class YahooHistoryData(WebHTML.Table, locator=history_locator, key="history", parser=history_parser): pass
 class YahooHistoryPage(WebBrowserPage):
+    columns = ["open", "close", "high", "low", "price", "volume"]
+    index = "date"
+
     def __call__(self, ticker, *args, dates, **kwargs):
-        columns = ["ticker", "open", "close", "high", "low", "price"]
         curl = YahooHistoryURL(ticker=ticker, dates=dates)
         self.load(str(curl.address), params=dict(curl.query))
         self.pageend()
         content = YahooHistoryData(self.source)
         table = content(*args, **kwargs)
         table = self.bars(table, *args, ticker=ticker, **kwargs)
-        table = table.set_index("date", drop=True, inplace=False)
-        return table[columns]
+        table = table.sort_values(self.index, ascending=True, inplace=False)
+        table = table.set_index(self.index, drop=True, inplace=False)
+        return table[self.columns]
 
     @staticmethod
     def bars(dataframe, *args, ticker, **kwargs):
