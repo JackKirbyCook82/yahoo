@@ -22,6 +22,10 @@ __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = ""
 
 
+bars_index = {"date": np.datetime64}
+bars_columns = {"high": np.float32, "low": np.float32, "open": np.float32, "close": np.float32, "price": np.float32, "volume": np.float32}
+bars_header = Header(pd.DataFrame, index=list(bars_index.keys()), columns=list(bars_columns.keys()), ascending="date")
+history_headers = dict(bars=bars_header)
 history_locator = r"//table[@class='table svelte-ewueuo']"
 volume_parser = lambda x: np.int64(str(x).replace(",", ""))
 price_parser = lambda x: np.float32(str(x).replace(",", ""))
@@ -45,19 +49,14 @@ class YahooHistoryURL(WebURL):
 
 class YahooHistoryData(WebHTML.Table, locator=history_locator, key="history", parser=history_parser): pass
 class YahooHistoryPage(WebBrowserPage):
-    columns = ["open", "close", "high", "low", "price", "volume"]
-    index = "date"
-
     def __call__(self, ticker, *args, dates, **kwargs):
         curl = YahooHistoryURL(ticker=ticker, dates=dates)
         self.load(str(curl.address), params=dict(curl.query))
         self.pageend()
         content = YahooHistoryData(self.source)
         table = content(*args, **kwargs)
-        table = self.bars(table, *args, ticker=ticker, **kwargs)
-        table = table.sort_values(self.index, ascending=True, inplace=False)
-        table = table.set_index(self.index, drop=True, inplace=False)
-        return table[self.columns]
+        bars = self.bars(table, *args, ticker=ticker, **kwargs)
+        return bars
 
     @staticmethod
     def bars(dataframe, *args, ticker, **kwargs):
@@ -74,10 +73,11 @@ class YahooHistoryDownloader(Processor):
         super().__init__(*args, name=name, **kwargs)
         self.__history = YahooHistoryPage(*args, feed=feed, **kwargs)
 
-    def execute(self, query, *args, dates, **kwargs):
-        ticker = query["ticker"]
+    @query("ticker", history=history_headers)
+    def execute(self, ticker, *args, dates, **kwargs):
         bars = self.history(ticker, *args, dates=dates, **kwargs)
-        yield query | dict(bars=bars)
+        history = dict(bars=bars)
+        yield dict(history=history)
 
     @property
     def history(self): return self.__history
