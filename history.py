@@ -73,10 +73,10 @@ class YahooHistoryDownloader(Processor, title="Downloaded"):
         super().__init__(*args, name=name, **kwargs)
         self.__history = YahooHistoryPage(*args, feed=feed, **kwargs)
 
-    @Query("ticker", bars=bars_header)
+    @Query()
     def execute(self, ticker, *args, dates, **kwargs):
         bars = self.history(ticker, *args, dates=dates, **kwargs)
-        yield dict(bars=bars)
+        yield bars
 
     @property
     def history(self): return self.__history
