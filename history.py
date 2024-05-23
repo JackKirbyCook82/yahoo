@@ -13,7 +13,7 @@ from datetime import datetime as Datetime
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.query import Header, Input, Output, Query
+from support.query import Header, Query
 from support.pipelines import Processor
 
 __version__ = "1.0.0"
@@ -26,6 +26,7 @@ __license__ = ""
 bars_index = {"date": np.datetime64}
 bars_columns = {"high": np.float32, "low": np.float32, "open": np.float32, "close": np.float32, "price": np.float32, "volume": np.float32}
 bars_header = Header(pd.DataFrame, index=list(bars_index.keys()), columns=list(bars_columns.keys()), ascending="date")
+history_headers = dict(bars=bars_header)
 history_locator = r"//table[@class='table svelte-ewueuo']"
 volume_parser = lambda x: np.int64(str(x).replace(",", ""))
 price_parser = lambda x: np.float32(str(x).replace(",", ""))
@@ -68,18 +69,15 @@ class YahooHistoryPage(WebBrowserPage):
         return dataframe
 
 
-yahoo_history_input = Input(arguments=["ticker"])
-yahoo_history_output = Output(arguments=["bars"])
-yahoo_history_header = {"bars": bars_header}
 class YahooHistoryDownloader(Processor, title="Downloaded"):
     def __init__(self, *args, feed, name=None, **kwargs):
         super().__init__(*args, name=name, **kwargs)
         self.__history = YahooHistoryPage(*args, feed=feed, **kwargs)
 
-    @Query(input=yahoo_history_input, output=yahoo_history_output, header=yahoo_history_header)
-    def execute(self, ticker, *args, dates, **kwargs):
+    @Query(arguments=["ticker"], headers=history_headers)
+    def execute(self, *args, ticker, dates, **kwargs):
         bars = self.history(ticker, *args, dates=dates, **kwargs)
-        yield bars
+        yield dict(bars=bars)
 
     @property
     def history(self): return self.__history
