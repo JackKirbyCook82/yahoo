@@ -13,7 +13,6 @@ from datetime import datetime as Datetime
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.query import Header, Query
 from support.pipelines import Processor
 
 __version__ = "1.0.0"
@@ -77,6 +76,7 @@ class YahooHistoryDownloader(Processor, title="Downloaded"):
     @Query(arguments=["ticker"], headers=history_headers)
     def execute(self, *args, ticker, dates, **kwargs):
         bars = self.history(ticker, *args, dates=dates, **kwargs)
+        bars = bars.sort_values("date", axis=0, ascending=True, inplace=False)
         yield dict(bars=bars)
 
     @property
