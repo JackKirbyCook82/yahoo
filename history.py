@@ -13,7 +13,7 @@ from datetime import datetime as Datetime
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.pipelines import Processor
+from support.pipelines import Processor, Header
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
@@ -24,7 +24,7 @@ __license__ = ""
 
 bars_index = {"date": np.datetime64}
 bars_columns = {"high": np.float32, "low": np.float32, "open": np.float32, "close": np.float32, "price": np.float32, "volume": np.float32}
-bars_header = Header(pd.DataFrame, index=list(bars_index.keys()), columns=list(bars_columns.keys()), ascending="date")
+bars_header = Header.Dataframe(index=list(bars_index.keys()), columns=list(bars_columns.keys()), ascending="date")
 history_headers = dict(bars=bars_header)
 history_locator = r"//table[@class='table svelte-ewueuo']"
 volume_parser = lambda x: np.int64(str(x).replace(",", ""))
