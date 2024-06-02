@@ -22,8 +22,6 @@ __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = ""
 
 
-bars_index = {"date": np.datetime64}
-bars_columns = {"high": np.float32, "low": np.float32, "open": np.float32, "close": np.float32, "price": np.float32, "volume": np.float32}
 history_locator = r"//table[@class='table svelte-ewueuo']"
 volume_parser = lambda x: np.int64(str(x).replace(",", ""))
 price_parser = lambda x: np.float32(str(x).replace(",", ""))
@@ -70,22 +68,15 @@ class YahooHistoryDownloader(Processor, title="Downloaded"):
     def __init__(self, *args, feed, name=None, **kwargs):
         super().__init__(*args, name=name, **kwargs)
         self.__history = YahooHistoryPage(*args, feed=feed, **kwargs)
-        self.__columns = list(bars_columns.keys())
-        self.__index = list(bars_index.keys())
 
     def execute(self, contents, *args, dates, **kwargs):
         ticker = contents["ticker"]
         bars = self.history(ticker, *args, dates=dates, **kwargs)
         bars = bars.sort_values("date", axis=0, ascending=True, inplace=False)
-        bars = bars.set_index(self.index, drop=True, inplace=False)[self.columns]
         yield contents | dict(bars=bars)
 
     @property
     def history(self): return self.__history
-    @property
-    def columns(self): return self.__columns
-    @property
-    def index(self): return self.__index
 
 
 
