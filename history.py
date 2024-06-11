@@ -60,6 +60,7 @@ class YahooHistoryPage(WebBrowserPage):
         for column in ["ticker", "open", "close", "high", "low", "price"]:
             dataframe[column] = dataframe[column].apply(price_parser)
         dataframe["volume"] = dataframe["volume"].apply(volume_parser)
+        dataframe = dataframe.sort_values("date", axis=0, ascending=True, inplace=False)
         dataframe["ticker"] = str(ticker).upper()
         return dataframe
 
@@ -72,7 +73,6 @@ class YahooHistoryDownloader(Processor, title="Downloaded"):
     def execute(self, contents, *args, dates, **kwargs):
         ticker = contents["symbol"].ticker
         bars = self.history(*args, ticker=ticker, dates=dates, **kwargs)
-        bars = bars.sort_values("date", axis=0, ascending=True, inplace=False)
         yield contents | dict(bars=bars)
 
     @property
