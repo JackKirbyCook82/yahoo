@@ -36,7 +36,7 @@ def history_parser(dataframe):
 
 class YahooHistoryURL(WebURL):
     def domain(cls, *args, **kwargs): return "https://finance.yahoo.com"
-    def path(cls, *args, symbol, **kwargs): return f"/quote/{str(symbol)}/history"
+    def path(cls, *args, ticker, **kwargs): return f"/quote/{str(ticker)}/history"
     def parms(cls, *args, dates, **kwargs):
         start = Datetime.combine(dates.minimum, Datetime.min.time()).timestamp()
         stop = Datetime.combine(dates.maximum, Datetime.min.time()).timestamp()
@@ -45,21 +45,22 @@ class YahooHistoryURL(WebURL):
 
 class YahooHistoryData(WebHTML.Table, locator=history_locator, key="history", parser=history_parser): pass
 class YahooHistoryPage(WebBrowserPage):
-    def __call__(self, *args, symbol, dates, **kwargs):
-        curl = YahooHistoryURL(symbol=symbol, dates=dates)
+    def __call__(self, *args, ticker, dates, **kwargs):
+        curl = YahooHistoryURL(ticker=ticker, dates=dates)
         self.load(str(curl.address), params=dict(curl.query))
         self.pageend()
         content = YahooHistoryData(self.source)
         table = content(*args, **kwargs)
-        bars = self.bars(table, *args, symbol=symbol, **kwargs)
+        bars = self.bars(table, *args, ticker=ticker, **kwargs)
         return bars
 
     @staticmethod
-    def bars(dataframe, *args, **kwargs):
+    def bars(dataframe, *args, ticker, **kwargs):
         dataframe["date"] = dataframe["date"].apply(pd.to_datetime)
-        for column in ["open", "close", "high", "low", "price"]:
+        for column in ["ticker", "open", "close", "high", "low", "price"]:
             dataframe[column] = dataframe[column].apply(price_parser)
         dataframe["volume"] = dataframe["volume"].apply(volume_parser)
+        dataframe["ticker"] = str(ticker).upper()
         return dataframe
 
 
@@ -69,8 +70,8 @@ class YahooHistoryDownloader(Processor, title="Downloaded"):
         self.__history = YahooHistoryPage(*args, feed=feed, **kwargs)
 
     def execute(self, contents, *args, dates, **kwargs):
-        symbol = contents["ticker"].symbol
-        bars = self.history(*args, symbol=symbol, dates=dates, **kwargs)
+        ticker = contents["symbol"].ticker
+        bars = self.history(*args, ticker=ticker, dates=dates, **kwargs)
         bars = bars.sort_values("date", axis=0, ascending=True, inplace=False)
         yield contents | dict(bars=bars)
 
