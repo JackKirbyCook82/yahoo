@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime as Datetime
 
+from finance.variables import Variables
 from support.pipelines import Processor
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
@@ -73,7 +74,8 @@ class YahooHistoryDownloader(Processor, title="Downloaded"):
     def execute(self, contents, *args, dates, **kwargs):
         ticker = contents["symbol"].ticker
         bars = self.history(*args, ticker=ticker, dates=dates, **kwargs)
-        yield contents | dict(bars=bars)
+        technicals = {str(Variables.Technicals.BARS.name).lower(): bars}
+        yield contents | technicals
 
     @property
     def history(self): return self.__history
