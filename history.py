@@ -58,7 +58,7 @@ class YahooHistoryPage(WebBrowserPage):
     @staticmethod
     def bars(dataframe, *args, ticker, **kwargs):
         dataframe["date"] = dataframe["date"].apply(pd.to_datetime)
-        for column in ["ticker", "open", "close", "high", "low", "price"]:
+        for column in ["open", "close", "high", "low", "price"]:
             dataframe[column] = dataframe[column].apply(price_parser)
         dataframe["volume"] = dataframe["volume"].apply(volume_parser)
         dataframe = dataframe.sort_values("date", axis=0, ascending=True, inplace=False)
