@@ -74,8 +74,7 @@ class YahooHistoryDownloader(Processor, title="Downloaded"):
     def execute(self, contents, *args, dates, **kwargs):
         ticker = contents["symbol"].ticker
         bars = self.history(*args, ticker=ticker, dates=dates, **kwargs)
-        technicals = {str(Variables.Technicals.BARS.name).lower(): bars}
-        yield contents | technicals
+        yield contents | {"bars": bars}
 
     @property
     def history(self): return self.__history
