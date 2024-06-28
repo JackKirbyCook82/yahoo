@@ -69,15 +69,17 @@ class YahooHistoryPage(WebBrowserPage):
 class YahooHistoryDownloader(Processor, title="Downloaded"):
     def __init__(self, *args, feed, name=None, **kwargs):
         super().__init__(*args, name=name, **kwargs)
-        self.__history = YahooHistoryPage(*args, feed=feed, **kwargs)
+        bars = YahooHistoryPage(*args, feed=feed, **kwargs)
+        self.__downloads = {Variables.Technicals.BARS: bars}
 
     def execute(self, contents, *args, dates, **kwargs):
-        ticker = contents["symbol"].ticker
-        bars = self.history(*args, ticker=ticker, dates=dates, **kwargs)
-        yield contents | {"bars": bars}
+        ticker = contents[Variables.Querys.SYMBOL].ticker
+        bars = self.downloads[Variables.Technicals.BARS](*args, ticker=ticker, dates=dates, **kwargs)
+        technicals = {Variables.Technicals.BARS: bars}
+        yield contents | technicals
 
     @property
-    def history(self): return self.__history
+    def downloads(self): return self.__downloads
 
 
 
