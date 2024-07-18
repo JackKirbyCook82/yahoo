@@ -23,7 +23,7 @@ __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = ""
 
 
-history_locator = r"//table[@class='table svelte-ewueuo']"
+history_locator = r"//table"
 volume_parser = lambda x: np.int64(str(x).replace(",", ""))
 price_parser = lambda x: np.float32(str(x).replace(",", ""))
 
