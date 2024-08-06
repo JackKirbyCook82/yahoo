@@ -23,9 +23,10 @@ __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = ""
 
 
-history_locator = r"//table"
+history_formatter = lambda self, *, results, elapsed, **kw: f"{str(self.title)}: {repr(self)}|{str(results[Variables.Querys.SYMBOL])}[{elapsed:.02f}s]"
 volume_parser = lambda x: np.int64(str(x).replace(",", ""))
 price_parser = lambda x: np.float32(str(x).replace(",", ""))
+history_locator = r"//table"
 
 
 def history_parser(dataframe):
@@ -66,13 +67,13 @@ class YahooHistoryPage(WebBrowserPage):
         return dataframe
 
 
-class YahooHistoryDownloader(Processor, title="Downloaded"):
+class YahooHistoryDownloader(Processor, title="Downloaded", formatter=history_formatter):
     def __init__(self, *args, feed, name=None, **kwargs):
         super().__init__(*args, name=name, **kwargs)
         bars = YahooHistoryPage(*args, feed=feed, **kwargs)
         self.__downloads = {Variables.Technicals.BARS: bars}
 
-    def execute(self, contents, *args, dates, **kwargs):
+    def processor(self, contents, *args, dates, **kwargs):
         ticker = contents[Variables.Querys.SYMBOL].ticker
         bars = self.downloads[Variables.Technicals.BARS](*args, ticker=ticker, dates=dates, **kwargs)
         technicals = {Variables.Technicals.BARS: bars}
