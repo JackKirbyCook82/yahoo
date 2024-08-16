@@ -6,12 +6,13 @@ Created on Fri Apr 19 2024
 
 """
 
+import logging
 import numpy as np
 import pandas as pd
 from datetime import datetime as Datetime
 
 from finance.variables import Variables
-from support.pipelines import Processor
+from finance.operations import Operations
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
@@ -21,9 +22,9 @@ __author__ = "Jack Kirby Cook"
 __all__ = ["YahooHistoryDownloader"]
 __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = ""
+__logger__ = logging.getLogger(__name__)
 
 
-history_formatter = lambda self, *, results, elapsed, **kw: f"{str(self.title)}: {repr(self)}|{str(results[Variables.Querys.SYMBOL])}[{elapsed:.02f}s]"
 volume_parser = lambda x: np.int64(str(x).replace(",", ""))
 price_parser = lambda x: np.float32(str(x).replace(",", ""))
 history_locator = r"//table"
@@ -67,7 +68,7 @@ class YahooHistoryPage(WebBrowserPage):
         return dataframe
 
 
-class YahooHistoryDownloader(Processor, title="Downloaded", formatter=history_formatter):
+class YahooHistoryDownloader(Operations.Processor, title="Downloaded"):
     def __init__(self, *args, feed, name=None, **kwargs):
         super().__init__(*args, name=name, **kwargs)
         bars = YahooHistoryPage(*args, feed=feed, **kwargs)
@@ -77,7 +78,7 @@ class YahooHistoryDownloader(Processor, title="Downloaded", formatter=history_fo
         ticker = contents[Variables.Querys.SYMBOL].ticker
         bars = self.downloads[Variables.Technicals.BARS](*args, ticker=ticker, dates=dates, **kwargs)
         technicals = {Variables.Technicals.BARS: bars}
-        yield contents | technicals
+        yield contents | dict(technicals)
 
     @property
     def downloads(self): return self.__downloads
