@@ -10,9 +10,9 @@ import logging
 import numpy as np
 import pandas as pd
 from datetime import datetime as Datetime
+from collections import OrderedDict as ODict
 
-from finance.variables import Variables
-from finance.operations import Operations
+from finance.variables import Pipelines, Variables
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
@@ -25,16 +25,17 @@ __license__ = ""
 __logger__ = logging.getLogger(__name__)
 
 
-volume_parser = lambda x: np.int64(str(x).replace(",", ""))
-price_parser = lambda x: np.float32(str(x).replace(",", ""))
-history_locator = r"//table"
+class Parsers:
+    prices = {column: lambda x: np.int64(str(x).replace(",", "")) for column in ("open", "close", "high", "low", "price")}
+    volumes = {column: lambda x: np.float32(str(x).replace(",", "")) for column in ("volume",)}
+    dates = {column: pd.to_datetime for column in ("date",)}
 
-
-def history_parser(dataframe):
-    dataframe.columns = [str(column).split(" ")[0].lower() for column in dataframe.columns]
-    dataframe = dataframe.rename(columns={"adj": "price"}, inplace=False)
-    dataframe = dataframe[~dataframe["open"].apply(str).str.contains("Dividend") & ~dataframe["open"].apply(str).str.contains("Split")]
-    return dataframe
+    @staticmethod
+    def history(dataframe):
+        dataframe.columns = [str(column).split(" ")[0].lower() for column in dataframe.columns]
+        dataframe = dataframe.rename(columns={"adj": "price"}, inplace=False)
+        dataframe = dataframe[~dataframe["open"].apply(str).str.contains("Dividend") & ~dataframe["open"].apply(str).str.contains("Split")]
+        return dataframe
 
 
 class YahooHistoryURL(WebURL):
@@ -46,7 +47,7 @@ class YahooHistoryURL(WebURL):
         return {"period1": start, "period2": stop, "frequency": "1d", "includeAdjustedClose": "true"}
 
 
-class YahooHistoryData(WebHTML.Table, locator=history_locator, key="history", parser=history_parser): pass
+class YahooHistoryData(WebHTML.Table, locator=r"//table", key="history", parser=Parsers.history): pass
 class YahooHistoryPage(WebBrowserPage):
     def __call__(self, *args, ticker, dates, **kwargs):
         curl = YahooHistoryURL(ticker=ticker, dates=dates)
@@ -59,29 +60,36 @@ class YahooHistoryPage(WebBrowserPage):
 
     @staticmethod
     def bars(dataframe, *args, ticker, **kwargs):
-        dataframe["date"] = dataframe["date"].apply(pd.to_datetime)
-        for column in ["open", "close", "high", "low", "price"]:
-            dataframe[column] = dataframe[column].apply(price_parser)
-        dataframe["volume"] = dataframe["volume"].apply(volume_parser)
+        function = lambda parsers: lambda columns: {parser(columns[column]) for column, parser in parsers.items()}
+        prices = dataframe.apply(function(Parsers.prices), axis=1, result_type="expand")
+        volumes = dataframe.apply(function(Parsers.volumes), axis=1, result_type="expand")
+        dates = dataframe.apply(function(Parsers.dates), axis=1, result_type="expand")
+        dataframe = pd.concat([dates, prices, volumes], axis=0)
         dataframe = dataframe.sort_values("date", axis=0, ascending=True, inplace=False)
         dataframe["ticker"] = str(ticker).upper()
         return dataframe
 
 
-class YahooHistoryDownloader(Operations.Processor, title="Downloaded"):
+class YahooHistoryDownloader(Pipelines.Processor, title="Downloaded"):
     def __init__(self, *args, feed, name=None, **kwargs):
         super().__init__(*args, name=name, **kwargs)
-        bars = YahooHistoryPage(*args, feed=feed, **kwargs)
-        self.__downloads = {Variables.Technicals.BARS: bars}
+        pages = {Variables.Technicals.BARS: YahooHistoryPage}
+        self.__pages = {variable: page(*args, feed=feed, **kwargs) for variable, page in pages.items()}
 
     def processor(self, contents, *args, dates, **kwargs):
         ticker = contents[Variables.Querys.SYMBOL].ticker
-        bars = self.downloads[Variables.Technicals.BARS](*args, ticker=ticker, dates=dates, **kwargs)
-        technicals = {Variables.Technicals.BARS: bars}
-        yield contents | dict(technicals)
+        assert isinstance(ticker, str)
+        parameters = dict(ticker=ticker, dates=dates)
+        update = ODict(list(self.download(*args, **parameters, **kwargs)))
+        yield contents | update
+
+    def download(self, *args, ticker, dates, **kwargs):
+        for variable, page in self.pages.items():
+            dataframe = page(*args, ticker=ticker, dates=dates, **kwargs)
+            yield variable, dataframe
 
     @property
-    def downloads(self): return self.__downloads
+    def pages(self): return self.__pages
 
 
 
