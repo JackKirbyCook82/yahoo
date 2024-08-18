@@ -80,13 +80,15 @@ class YahooHistoryDownloader(Pipelines.Processor, title="Downloaded"):
         ticker = contents[Variables.Querys.SYMBOL].ticker
         assert isinstance(ticker, str)
         parameters = dict(ticker=ticker, dates=dates)
-        update = ODict(list(self.download(*args, **parameters, **kwargs)))
-        yield contents | update
+        technicals = ODict(list(self.download(*args, **parameters, **kwargs)))
+        if not bool(technicals): return
+        yield contents | technicals
 
     def download(self, *args, ticker, dates, **kwargs):
         for variable, page in self.pages.items():
-            dataframe = page(*args, ticker=ticker, dates=dates, **kwargs)
-            yield variable, dataframe
+            technical = page(*args, ticker=ticker, dates=dates, **kwargs)
+            if bool(technical.empty): continue
+            yield variable, technical
 
     @property
     def pages(self): return self.__pages
