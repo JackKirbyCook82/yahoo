@@ -26,8 +26,8 @@ __logger__ = logging.getLogger(__name__)
 
 
 class Parsers:
-    prices = {column: lambda x: np.int64(str(x).replace(",", "")) for column in ("open", "close", "high", "low", "price")}
-    volumes = {column: lambda x: np.float32(str(x).replace(",", "")) for column in ("volume",)}
+    prices = {column: lambda x: np.float32(str(x).replace(",", "")) for column in ("open", "close", "high", "low", "price")}
+    volumes = {column: lambda x: np.int64(str(x).replace(",", "")) for column in ("volume",)}
     dates = {column: pd.to_datetime for column in ("date",)}
 
     @staticmethod
@@ -60,11 +60,11 @@ class YahooHistoryPage(WebBrowserPage):
 
     @staticmethod
     def bars(dataframe, *args, ticker, **kwargs):
-        function = lambda parsers: lambda columns: {parser(columns[column]) for column, parser in parsers.items()}
+        function = lambda parsers: lambda columns: {column: parser(columns[column]) for column, parser in parsers.items()}
         prices = dataframe.apply(function(Parsers.prices), axis=1, result_type="expand")
         volumes = dataframe.apply(function(Parsers.volumes), axis=1, result_type="expand")
         dates = dataframe.apply(function(Parsers.dates), axis=1, result_type="expand")
-        dataframe = pd.concat([dates, prices, volumes], axis=0)
+        dataframe = pd.concat([dates, prices, volumes], axis=1)
         dataframe = dataframe.sort_values("date", axis=0, ascending=True, inplace=False)
         dataframe["ticker"] = str(ticker).upper()
         return dataframe
