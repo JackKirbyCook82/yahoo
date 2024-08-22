@@ -12,7 +12,8 @@ import pandas as pd
 from datetime import datetime as Datetime
 from collections import OrderedDict as ODict
 
-from finance.variables import Pipelines, Variables
+from finance.variables import Variables
+from support.pipelines import Processor
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
@@ -70,7 +71,7 @@ class YahooHistoryPage(WebBrowserPage):
         return dataframe
 
 
-class YahooHistoryDownloader(Pipelines.Processor, title="Downloaded"):
+class YahooHistoryDownloader(Processor, title="Downloaded"):
     def __init__(self, *args, feed, name=None, **kwargs):
         super().__init__(*args, name=name, **kwargs)
         pages = {Variables.Technicals.BARS: YahooHistoryPage}
