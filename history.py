@@ -72,10 +72,10 @@ class YahooHistoryPage(WebBrowserPage):
 
 
 class YahooHistoryDownloader(Processor, title="Downloaded"):
-    def __init__(self, *args, feed, name=None, **kwargs):
+    def __init__(self, *args, datafeed, name=None, **kwargs):
         super().__init__(*args, name=name, **kwargs)
         pages = {Variables.Technicals.BARS: YahooHistoryPage}
-        self.__pages = {variable: page(*args, feed=feed, **kwargs) for variable, page in pages.items()}
+        self.__pages = {variable: page(*args, feed=datafeed, **kwargs) for variable, page in pages.items()}
 
     def processor(self, contents, *args, dates, **kwargs):
         ticker = contents[Variables.Querys.SYMBOL].ticker
