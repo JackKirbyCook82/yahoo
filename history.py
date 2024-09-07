@@ -26,7 +26,7 @@ __license__ = ""
 __logger__ = logging.getLogger(__name__)
 
 
-class Parsers:
+class Parsers(object):
     prices = {column: lambda x: np.float32(str(x).replace(",", "")) for column in ("open", "close", "high", "low", "price")}
     volumes = {column: lambda x: np.int64(str(x).replace(",", "")) for column in ("volume",)}
     dates = {column: pd.to_datetime for column in ("date",)}
@@ -72,10 +72,10 @@ class YahooHistoryPage(WebBrowserPage):
 
 
 class YahooHistoryDownloader(Processor, title="Downloaded"):
-    def __init__(self, *args, datafeed, name=None, **kwargs):
+    def __init__(self, *args, name=None, **kwargs):
         super().__init__(*args, name=name, **kwargs)
         pages = {Variables.Technicals.BARS: YahooHistoryPage}
-        self.__pages = {variable: page(*args, feed=datafeed, **kwargs) for variable, page in pages.items()}
+        self.__pages = {variable: page(*args, **kwargs) for variable, page in pages.items()}
 
     def processor(self, contents, *args, dates, **kwargs):
         ticker = contents[Variables.Querys.SYMBOL].ticker
