@@ -9,18 +9,18 @@ Created on Fri Apr 19 2024
 import logging
 import numpy as np
 import pandas as pd
+from abc import ABC, abstractmethod
 from datetime import datetime as Datetime
-from collections import OrderedDict as ODict
 
-from finance.variables import Variables
-from support.pipelines import Processor
+from finance.variables import Symbol
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
+from support.mixins import Sizing
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
-__all__ = ["YahooHistoryDownloader"]
+__all__ = ["YahooBarsDownloader"]
 __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = ""
 __logger__ = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class Parsers(object):
         return dataframe
 
 
-class YahooHistoryURL(WebURL):
+class YahooTechnicalURL(WebURL):
     def domain(cls, *args, **kwargs): return "https://finance.yahoo.com"
     def path(cls, *args, ticker, **kwargs): return f"/quote/{str(ticker)}/history"
     def parms(cls, *args, dates, **kwargs):
@@ -48,13 +48,13 @@ class YahooHistoryURL(WebURL):
         return {"period1": start, "period2": stop, "frequency": "1d", "includeAdjustedClose": "true"}
 
 
-class YahooHistoryData(WebHTML.Table, locator=r"//table", key="history", parser=Parsers.history): pass
-class YahooHistoryPage(WebBrowserPage):
+class YahooTechnicalData(WebHTML.Table, locator=r"//table", key="history", parser=Parsers.history): pass
+class YahooTechnicalPage(WebBrowserPage):
     def __call__(self, *args, ticker, dates, **kwargs):
-        curl = YahooHistoryURL(ticker=ticker, dates=dates)
+        curl = YahooTechnicalURL(ticker=ticker, dates=dates)
         self.load(str(curl.address), params=dict(curl.query))
         self.pageend()
-        content = YahooHistoryData(self.source)
+        content = YahooTechnicalData(self.source)
         table = content(*args, **kwargs)
         bars = self.bars(table, *args, ticker=ticker, **kwargs)
         return bars
@@ -71,28 +71,32 @@ class YahooHistoryPage(WebBrowserPage):
         return dataframe
 
 
-class YahooHistoryDownloader(Processor, title="Downloaded"):
-    def __init__(self, *args, name=None, **kwargs):
-        super().__init__(*args, name=name, **kwargs)
-        pages = {Variables.Technicals.BARS: YahooHistoryPage}
-        self.__pages = {variable: page(*args, **kwargs) for variable, page in pages.items()}
+class YahooTechnicalDownloader(Sizing, ABC):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__page = YahooTechnicalPage(*args, **kwargs)
+        self.__logger = __logger__
 
-    def processor(self, contents, *args, dates, **kwargs):
-        ticker = contents[Variables.Querys.SYMBOL].ticker
-        assert isinstance(ticker, str)
-        parameters = dict(ticker=ticker, dates=dates)
-        technicals = ODict(list(self.download(*args, **parameters, **kwargs)))
-        if not bool(technicals): return
-        yield contents | technicals
-
-    def download(self, *args, ticker, dates, **kwargs):
-        for variable, page in self.pages.items():
-            technical = page(*args, ticker=ticker, dates=dates, **kwargs)
-            if bool(technical.empty): continue
-            yield variable, technical
+    @abstractmethod
+    def download(self, *args, **kwargs): pass
 
     @property
-    def pages(self): return self.__pages
+    def logger(self): return self.__logger
+    @property
+    def page(self): return self.__page
+
+
+class YahooBarsDownloader(YahooTechnicalDownloader):
+    def download(self, symbol, *args, dates, **kwargs):
+        assert isinstance(symbol, Symbol)
+        bars = self.page(*args, ticker=symbol.ticker, dates=dates, **kwargs)
+        assert isinstance(bars, pd.DataFrame)
+        size = self.size(bars)
+        string = f"Downloaded: {repr(self)}|{str(symbol)}[{size:.0f}]"
+        self.logger.info(string)
+        return bars
+
+
 
 
 
