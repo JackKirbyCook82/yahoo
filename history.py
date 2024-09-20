@@ -9,14 +9,14 @@ Created on Fri Apr 19 2024
 import logging
 import numpy as np
 import pandas as pd
-from abc import ABC, abstractmethod
 from datetime import datetime as Datetime
 
-from finance.variables import Symbol
+from finance.variables import Variables, Symbol
+from support.processes import Downloader
+from support.meta import RegistryMeta
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.mixins import Sizing
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
@@ -26,7 +26,7 @@ __license__ = ""
 __logger__ = logging.getLogger(__name__)
 
 
-class Parsers(object):
+class YahooHistoryParsers(object):
     prices = {column: lambda x: np.float32(str(x).replace(",", "")) for column in ("open", "close", "high", "low", "price")}
     volumes = {column: lambda x: np.int64(str(x).replace(",", "")) for column in ("volume",)}
     dates = {column: pd.to_datetime for column in ("date",)}
@@ -48,8 +48,11 @@ class YahooTechnicalURL(WebURL):
         return {"period1": start, "period2": stop, "frequency": "1d", "includeAdjustedClose": "true"}
 
 
-class YahooTechnicalData(WebHTML.Table, locator=r"//table", key="history", parser=Parsers.history): pass
-class YahooTechnicalPage(WebBrowserPage):
+class YahooTechnicalData(WebHTML.Table, locator=r"//table", key="history", parser=YahooHistoryParsers.history): pass
+class YahooTechnicalPage(WebBrowserPage, metaclass=RegistryMeta): pass
+
+
+class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
     def __call__(self, *args, ticker, dates, **kwargs):
         curl = YahooTechnicalURL(ticker=ticker, dates=dates)
         self.load(str(curl.address), params=dict(curl.query))
@@ -62,37 +65,23 @@ class YahooTechnicalPage(WebBrowserPage):
     @staticmethod
     def bars(dataframe, *args, ticker, **kwargs):
         function = lambda parsers: lambda columns: {column: parser(columns[column]) for column, parser in parsers.items()}
-        prices = dataframe.apply(function(Parsers.prices), axis=1, result_type="expand")
-        volumes = dataframe.apply(function(Parsers.volumes), axis=1, result_type="expand")
-        dates = dataframe.apply(function(Parsers.dates), axis=1, result_type="expand")
+        prices = dataframe.apply(function(YahooHistoryParsers.prices), axis=1, result_type="expand")
+        volumes = dataframe.apply(function(YahooHistoryParsers.volumes), axis=1, result_type="expand")
+        dates = dataframe.apply(function(YahooHistoryParsers.dates), axis=1, result_type="expand")
         dataframe = pd.concat([dates, prices, volumes], axis=1)
         dataframe = dataframe.sort_values("date", axis=0, ascending=True, inplace=False)
         dataframe["ticker"] = str(ticker).upper()
         return dataframe
 
 
-class YahooTechnicalDownloader(Sizing, ABC):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__page = YahooTechnicalPage(*args, **kwargs)
-        self.__logger = __logger__
-
-    @abstractmethod
-    def download(self, *args, **kwargs): pass
-
-    @property
-    def logger(self): return self.__logger
-    @property
-    def page(self): return self.__page
-
-
-class YahooBarsDownloader(YahooTechnicalDownloader):
-    def download(self, symbol, *args, dates, **kwargs):
+class YahooBarsDownloader(Downloader, pages=dict(YahooTechnicalPage)):
+    def execute(self, symbol, *args, dates, **kwargs):
         assert isinstance(symbol, Symbol)
-        bars = self.page(*args, ticker=symbol.ticker, dates=dates, **kwargs)
+        variable = Variables.Technicals.BARS
+        bars = self.pages[variable](*args, ticker=symbol.ticker, dates=dates, **kwargs)
         assert isinstance(bars, pd.DataFrame)
         size = self.size(bars)
-        string = f"Downloaded: {repr(self)}|{str(symbol)}[{size:.0f}]"
+        string = f"{str(self.title)}: {repr(self)}|{str(symbol)}[{size:.0f}]"
         self.logger.info(string)
         return bars
 
