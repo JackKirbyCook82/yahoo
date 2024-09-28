@@ -12,7 +12,6 @@ import pandas as pd
 from datetime import datetime as Datetime
 
 from finance.variables import Variables, Symbol
-from support.processes import Downloader
 from support.meta import RegistryMeta
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
@@ -20,7 +19,7 @@ from webscraping.weburl import WebURL
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
-__all__ = ["YahooBarsDownloader"]
+__all__ = ["YahooTechnicalDownloader"]
 __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = ""
 __logger__ = logging.getLogger(__name__)
@@ -48,10 +47,11 @@ class YahooTechnicalURL(WebURL):
         return {"period1": start, "period2": stop, "frequency": "1d", "includeAdjustedClose": "true"}
 
 
-class YahooTechnicalData(WebHTML.Table, locator=r"//table", key="history", parser=YahooHistoryParsers.history): pass
+class YahooTechnicalData(WebHTML.Table, locator=r"//table", key="history", parser=YahooHistoryParsers.history):
+    pass
+
+
 class YahooTechnicalPage(WebBrowserPage, metaclass=RegistryMeta): pass
-
-
 class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
     def __call__(self, *args, ticker, dates, **kwargs):
         curl = YahooTechnicalURL(ticker=ticker, dates=dates)
@@ -74,16 +74,40 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
         return dataframe
 
 
-class YahooBarsDownloader(Downloader, pages=dict(YahooTechnicalPage)):
+class YahooTechnicalDownloader(object):
+    def __init__(self, *args, technical=Variables.Technicals.BARS, **kwargs):
+        self.__page = YahooTechnicalPage[technical](*args, **kwargs)
+        self.__technical = technical
+        self.__logger = __logger__
+
+    def __call__(self, symbols, *args, **kwargs):
+        assert isinstance(symbols, list)
+        for symbol in symbols:
+            bars = self.execute(symbol, *args, **kwargs)
+            size = len(bars.dropna(how="all", inplace=False).index)
+            string = f"Downloaded: {repr(self)}|{str(symbol)}[{size:.0f}]"
+            self.logger.info(string)
+            if bool(bars.empty): continue
+            yield bars
+
     def execute(self, symbol, *args, dates, **kwargs):
         assert isinstance(symbol, Symbol)
-        variable = Variables.Technicals.BARS
-        bars = self.pages[variable](*args, ticker=symbol.ticker, dates=dates, **kwargs)
-        assert isinstance(bars, pd.DataFrame)
-        size = self.size(bars)
-        string = f"{str(self.title)}: {repr(self)}|{str(symbol)}[{size:.0f}]"
-        self.logger.info(string)
+        parameters = dict(ticker=symbol.ticker, dates=dates)
+        bars = self.download(*args, **parameters, **kwargs)
         return bars
+
+    def download(self, *args, ticker, dates, **kwargs):
+        bars = self.page(*args, ticker=ticker, dates=dates, **kwargs)
+        assert isinstance(bars, pd.DataFrame)
+        return bars
+
+    @property
+    def technical(self): return self.__technical
+    @property
+    def logger(self): return self.__logger
+    @property
+    def pages(self): return self.__pages
+
 
 
 
