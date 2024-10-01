@@ -15,8 +15,8 @@ from finance.variables import Variables, Symbol
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
+from support.mixins import Empty, Sizing, Logging
 from support.meta import RegistryMeta
-from support.mixins import Sizing
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
@@ -75,13 +75,11 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
         return dataframe
 
 
-class YahooTechnicalDownloader(Sizing):
-    def __repr__(self): return str(self.name)
+class YahooTechnicalDownloader(Sizing, Empty, Logging):
     def __init__(self, *args, technical=Variables.Technicals.BARS, **kwargs):
-        self.__name = kwargs.pop("name", self.__class__.__name__)
+        super().__init__(*args, **kwargs)
         self.__page = YahooTechnicalPage[technical](*args, **kwargs)
         self.__technical = technical
-        self.__logger = __logger__
 
     def __call__(self, symbols, *args, **kwargs):
         for symbol in self.symbols(symbols):
@@ -112,11 +110,7 @@ class YahooTechnicalDownloader(Sizing):
     @property
     def technical(self): return self.__technical
     @property
-    def logger(self): return self.__logger
-    @property
     def pages(self): return self.__pages
-    @property
-    def name(self): return self.__name
 
 
 
