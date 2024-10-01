@@ -12,10 +12,11 @@ import pandas as pd
 from datetime import datetime as Datetime
 
 from finance.variables import Variables, Symbol
-from support.meta import RegistryMeta
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
+from support.meta import RegistryMeta
+from support.mixins import Sizing
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
@@ -74,26 +75,26 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
         return dataframe
 
 
-class YahooTechnicalDownloader(object):
+class YahooTechnicalDownloader(Sizing):
+    def __repr__(self): return str(self.name)
     def __init__(self, *args, technical=Variables.Technicals.BARS, **kwargs):
+        self.__name = kwargs.pop("name", self.__class__.__name__)
         self.__page = YahooTechnicalPage[technical](*args, **kwargs)
         self.__technical = technical
         self.__logger = __logger__
 
     def __call__(self, symbols, *args, **kwargs):
-        assert isinstance(symbols, list)
-        for symbol in symbols:
-            bars = self.execute(symbol, *args, **kwargs)
-            size = len(bars.dropna(how="all", inplace=False).index)
+        for symbol in self.symbols(symbols):
+            parameters = dict(ticker=symbol.ticker)
+            bars = self.execute(*args, **parameters, **kwargs)
+            size = self.size(bars)
             string = f"Downloaded: {repr(self)}|{str(symbol)}[{size:.0f}]"
             self.logger.info(string)
             if bool(bars.empty): continue
             yield bars
 
-    def execute(self, symbol, *args, dates, **kwargs):
-        assert isinstance(symbol, Symbol)
-        parameters = dict(ticker=symbol.ticker, dates=dates)
-        bars = self.download(*args, **parameters, **kwargs)
+    def execute(self, *args, **kwargs):
+        bars = self.download(*args, **kwargs)
         return bars
 
     def download(self, *args, ticker, dates, **kwargs):
@@ -101,12 +102,21 @@ class YahooTechnicalDownloader(object):
         assert isinstance(bars, pd.DataFrame)
         return bars
 
+    @staticmethod
+    def symbols(symbols):
+        assert isinstance(symbols, (list, Symbol))
+        assert all([isinstance(symbol, Symbol) for symbol in symbols]) if isinstance(symbols, list) else True
+        symbols = [symbols] if not isinstance(symbols, list) else symbols
+        yield from iter(symbols)
+
     @property
     def technical(self): return self.__technical
     @property
     def logger(self): return self.__logger
     @property
     def pages(self): return self.__pages
+    @property
+    def name(self): return self.__name
 
 
 
