@@ -39,6 +39,19 @@ class YahooHistoryParsers(object):
         return dataframe
 
 
+class YahooHistoryVariables(object):
+    axes = {Variables.Querys.HISTORY: ["date", "ticker"], Variables.Querys.SYMBOL: ["ticker"]}
+    data = {Variables.Technicals.BARS: ["price", "open", "close", "high", "low", "volume"]}
+
+    def __init__(self, *args, **kwargs):
+        self.history = self.axes[Variables.Querys.HISTORY]
+        self.symbol = self.axes[Variables.Querys.SYMBOL]
+        self.bars = self.data[Variables.Technicals.BARS]
+        self.index = self.history
+        self.columns = self.bars
+        self.header = self.index + self.columns
+
+
 class YahooTechnicalURL(WebURL):
     def domain(cls, *args, **kwargs): return "https://finance.yahoo.com"
     def path(cls, *args, ticker, **kwargs): return f"/quote/{str(ticker)}/history"
@@ -78,6 +91,7 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
 class YahooTechnicalDownloader(Sizing, Empty, Logging):
     def __init__(self, *args, technical=Variables.Technicals.BARS, **kwargs):
         super().__init__(*args, **kwargs)
+        self.__variables = YahooHistoryVariables(*args, techncial=technical, **kwargs)
         self.__page = YahooTechnicalPage[technical](*args, **kwargs)
         self.__technical = technical
 
@@ -88,7 +102,7 @@ class YahooTechnicalDownloader(Sizing, Empty, Logging):
             size = self.size(bars)
             string = f"Downloaded: {repr(self)}|{str(symbol)}[{size:.0f}]"
             self.logger.info(string)
-            if bool(bars.empty): continue
+            if self.empty(bars): continue
             yield bars
 
     def execute(self, *args, **kwargs):
@@ -107,6 +121,8 @@ class YahooTechnicalDownloader(Sizing, Empty, Logging):
         symbols = [symbols] if not isinstance(symbols, list) else symbols
         yield from iter(symbols)
 
+    @property
+    def variables(self): return self.__variables
     @property
     def technical(self): return self.__technical
     @property
