@@ -15,7 +15,7 @@ from finance.variables import Variables, Querys
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.mixins import Emptying, Sizing, Logging, Pipelining, Sourcing
+from support.mixins import Emptying, Sizing, Logging, Pipelining
 from support.meta import RegistryMeta
 
 __version__ = "1.0.0"
@@ -75,14 +75,18 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
         return dataframe
 
 
-class YahooTechnicalDownloader(Pipelining, Sourcing, Sizing, Emptying, Logging):
+class YahooTechnicalDownloader(Pipelining, Logging, Sizing, Emptying):
     def __init__(self, *args, technical=Variables.Technicals.BARS, **kwargs):
+        assert technical in list(Variables.Technicals)
         Pipelining.__init__(self, *args, **kwargs)
         Logging.__init__(self, *args, **kwargs)
         self.__page = YahooTechnicalPage[technical](*args, **kwargs)
 
     def execute(self, symbols, *args, dates, **kwargs):
-        for symbol in self.source(symbols, Querys.Symbol):
+        assert isinstance(symbols, list) or isinstance(symbols, Querys.Symbol)
+        symbols = symbols if isinstance(symbols, list) else [symbols]
+        assert all([isinstance(symbol, Querys.Symbol) for symbol in symbols])
+        for symbol in list(symbols):
             parameters = dict(ticker=symbol.ticker, dates=dates)
             bars = self.download(*args, **parameters, **kwargs)
             size = self.size(bars)
