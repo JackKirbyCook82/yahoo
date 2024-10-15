@@ -86,6 +86,7 @@ class YahooTechnicalDownloader(Pipelining, Logging, Sizing, Emptying):
         assert isinstance(symbols, list) or isinstance(symbols, Querys.Symbol)
         symbols = symbols if isinstance(symbols, list) else [symbols]
         assert all([isinstance(symbol, Querys.Symbol) for symbol in symbols])
+        if not bool(symbols): return
         for symbol in list(symbols):
             parameters = dict(ticker=symbol.ticker, dates=dates)
             bars = self.download(*args, **parameters, **kwargs)
