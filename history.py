@@ -15,7 +15,7 @@ from finance.variables import Variables, Querys
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.mixins import Emptying, Sizing, Logging, Pipelining
+from support.mixins import Function, Emptying, Sizing, Logging
 from support.meta import RegistryMeta
 
 __version__ = "1.0.0"
@@ -75,26 +75,24 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
         return dataframe
 
 
-class YahooTechnicalDownloader(Pipelining, Logging, Sizing, Emptying):
+class YahooTechnicalDownloader(Function, Logging, Sizing, Emptying):
     def __init__(self, *args, technical=Variables.Technicals.BARS, **kwargs):
         assert technical in list(Variables.Technicals)
-        Pipelining.__init__(self, *args, **kwargs)
+        Function.__init__(self, *args, **kwargs)
         Logging.__init__(self, *args, **kwargs)
         self.__page = YahooTechnicalPage[technical](*args, **kwargs)
 
-    def execute(self, symbols, *args, dates, **kwargs):
-        assert isinstance(symbols, list) or isinstance(symbols, Querys.Symbol)
-        symbols = symbols if isinstance(symbols, list) else [symbols]
-        assert all([isinstance(symbol, Querys.Symbol) for symbol in symbols])
-        if not bool(symbols): return
-        for symbol in list(symbols):
-            parameters = dict(ticker=symbol.ticker, dates=dates)
-            bars = self.download(*args, **parameters, **kwargs)
-            size = self.size(bars)
-            string = f"Downloaded: {repr(self)}|{str(symbol)}[{size:.0f}]"
-            self.logger.info(string)
-            if self.empty(bars): continue
-            yield bars
+    def execute(self, source, *args, dates, **kwargs):
+        assert isinstance(source, tuple)
+        symbol = source[0]
+        assert isinstance(symbol, Querys.Symbol)
+        parameters = dict(ticker=symbol.ticker, dates=dates)
+        bars = self.download(*args, **parameters, **kwargs)
+        size = self.size(bars)
+        string = f"Downloaded: {repr(self)}|{str(symbol)}[{size:.0f}]"
+        self.logger.info(string)
+        if self.empty(bars): return
+        return bars
 
     def download(self, *args, ticker, dates, **kwargs):
         bars = self.page(*args, ticker=ticker, dates=dates, **kwargs)
