@@ -82,9 +82,7 @@ class YahooTechnicalDownloader(Function, Logging, Sizing, Emptying):
         Logging.__init__(self, *args, **kwargs)
         self.__page = YahooTechnicalPage[technical](*args, **kwargs)
 
-    def execute(self, source, *args, dates, **kwargs):
-        assert isinstance(source, tuple)
-        symbol = source[0]
+    def execute(self, symbol, *args, dates, **kwargs):
         assert isinstance(symbol, Querys.Symbol)
         parameters = dict(ticker=symbol.ticker, dates=dates)
         bars = self.download(*args, **parameters, **kwargs)
