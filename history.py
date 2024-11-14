@@ -6,12 +6,11 @@ Created on Fri Apr 19 2024
 
 """
 
-import logging
 import numpy as np
 import pandas as pd
 from datetime import datetime as Datetime
 
-from finance.variables import Variables, Querys
+from finance.variables import Variables
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
@@ -23,7 +22,6 @@ __author__ = "Jack Kirby Cook"
 __all__ = ["YahooTechnicalDownloader"]
 __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = ""
-__logger__ = logging.getLogger(__name__)
 
 
 class YahooHistoryParsers(object):
@@ -82,7 +80,7 @@ class YahooTechnicalDownloader(Logging, Sizing, Emptying):
         self.__page = YahooTechnicalPage[technical](*args, **kwargs)
 
     def execute(self, symbol, *args, dates, **kwargs):
-        assert isinstance(symbol, Querys.Symbol)
+        if symbol is None: return
         parameters = dict(ticker=symbol.ticker, dates=dates)
         bars = self.download(*args, **parameters, **kwargs)
         size = self.size(bars)
