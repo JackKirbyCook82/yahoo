@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime as Datetime
 
-from finance.variables import Variables
+from finance.variables import Querys, Variables
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
@@ -31,9 +31,12 @@ class YahooHistoryParsers(object):
 
     @staticmethod
     def history(dataframe):
+        assert isinstance(dataframe, pd.DataFrame)
         dataframe.columns = [str(column).split(" ")[0].lower() for column in dataframe.columns]
         dataframe = dataframe.rename(columns={"adj": "price"}, inplace=False)
-        dataframe = dataframe[~dataframe["open"].apply(str).str.contains("Dividend") & ~dataframe["open"].apply(str).str.contains("Split")]
+        dividend = ~dataframe["open"].apply(str).str.contains("Dividend")
+        split = ~dataframe["open"].apply(str).str.contains("Split")
+        dataframe = dataframe[dividend & split]
         return dataframe
 
 
@@ -56,8 +59,7 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
         curl = YahooTechnicalURL(ticker=ticker, dates=dates)
         self.load(str(curl.address), params=dict(curl.query))
         self.pageend()
-        content = YahooTechnicalData(self.source)
-        table = content(*args, **kwargs)
+        table = YahooTechnicalData(self.source).data
         bars = self.bars(table, *args, ticker=ticker, **kwargs)
         return bars
 
@@ -77,28 +79,23 @@ class YahooTechnicalDownloader(Logging, Sizing, Emptying):
     def __init__(self, *args, technical=Variables.Technicals.BARS, **kwargs):
         assert technical in list(Variables.Technicals)
         super().__init__(*args, **kwargs)
-        self.__page = YahooTechnicalPage[technical](*args, **kwargs)
+        self.page = YahooTechnicalPage[technical](*args, **kwargs)
 
     def execute(self, symbol, *args, dates, **kwargs):
         if symbol is None: return
+        assert isinstance(symbol, Querys.Symbol)
         parameters = dict(ticker=symbol.ticker, dates=dates)
         bars = self.download(*args, **parameters, **kwargs)
         size = self.size(bars)
-        string = f"Downloaded: {repr(self)}|{str(symbol)}[{size:.0f}]"
+        string = f"Downloaded: {repr(self)}|{str(symbol)}[{int(size):.0f}]"
         self.logger.info(string)
         if self.empty(bars): return
         return bars
 
-    def download(self, *args, ticker, dates, **kwargs):
-        bars = self.page(*args, ticker=ticker, dates=dates, **kwargs)
+    def download(self, ticker, dates):
+        bars = self.page(ticker=ticker, dates=dates)
         assert isinstance(bars, pd.DataFrame)
         return bars
-
-    @property
-    def page(self): return self.__page
-
-
-
 
 
 
