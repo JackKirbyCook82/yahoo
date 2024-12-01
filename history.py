@@ -80,10 +80,11 @@ class YahooTechnicalDownloader(Logging, Sizing, Emptying):
         assert technical in list(Variables.Technicals)
         super().__init__(*args, **kwargs)
         self.page = YahooTechnicalPage[technical](*args, **kwargs)
+        self.query = Querys.Symbol
 
     def execute(self, symbol, *args, dates, **kwargs):
         if symbol is None: return
-        assert isinstance(symbol, Querys.Symbol)
+        symbol = self.query(symbol)
         parameters = dict(ticker=symbol.ticker, dates=dates)
         bars = self.download(*args, **parameters, **kwargs)
         size = self.size(bars)
