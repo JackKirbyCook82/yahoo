@@ -25,9 +25,9 @@ __license__ = ""
 
 
 class YahooHistoryParsers(object):
-    prices = {column: lambda x: np.float32(str(x).replace(",", "")) for column in ("open", "close", "high", "low", "price")}
-    volumes = {column: lambda x: np.int64(str(x).replace(",", "")) for column in ("volume",)}
-    dates = {column: pd.to_datetime for column in ("date",)}
+    prices = {column: lambda x: np.float32(str(x).replace(",", "")) for column in ["open", "close", "high", "low", "price"]}
+    volumes = {column: lambda x: np.int64(str(x).replace(",", "")) for column in ["volume"]}
+    dates = {column: pd.to_datetime for column in ["date"]}
 
     @staticmethod
     def history(dataframe):
