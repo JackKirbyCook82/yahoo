@@ -14,7 +14,7 @@ from finance.variables import Querys, Variables
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.mixins import Emptying, Sizing, Logging
+from support.mixins import Emptying, Sizing, Logging, Separating
 from support.meta import RegistryMeta
 
 __version__ = "1.0.0"
@@ -75,10 +75,11 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
         return dataframe
 
 
-class YahooTechnicalDownloader(Logging, Sizing, Emptying):
+class YahooTechnicalDownloader(Logging, Sizing, Emptying, Separating):
     def __init__(self, *args, technical=Variables.Technicals.BARS, **kwargs):
         assert technical in list(Variables.Technicals)
-        super().__init__(*args, **kwargs)
+        try: super().__init__(*args, **kwargs)
+        except TypeError: super().__init__()
         self.page = YahooTechnicalPage[technical](*args, **kwargs)
         self.query = Querys.Symbol
 
