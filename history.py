@@ -14,7 +14,7 @@ from finance.variables import Querys, Variables
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.mixins import Emptying, Sizing, Logging, Separating
+from support.mixins import Emptying, Sizing, Logging
 from support.meta import RegistryMeta
 
 __version__ = "1.0.0"
@@ -59,13 +59,14 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
         curl = YahooTechnicalURL(ticker=ticker, dates=dates)
         self.load(str(curl.address), params=dict(curl.query))
         self.pageend()
-        table = YahooTechnicalData(self.source).data
+        table = YahooTechnicalData(self.source)
         bars = self.bars(table, *args, ticker=ticker, **kwargs)
         return bars
 
     @staticmethod
-    def bars(dataframe, *args, ticker, **kwargs):
+    def bars(contents, *args, ticker, **kwargs):
         function = lambda parsers: lambda columns: {column: parser(columns[column]) for column, parser in parsers.items()}
+        dataframe = contents.data
         prices = dataframe.apply(function(YahooHistoryParsers.prices), axis=1, result_type="expand")
         volumes = dataframe.apply(function(YahooHistoryParsers.volumes), axis=1, result_type="expand")
         dates = dataframe.apply(function(YahooHistoryParsers.dates), axis=1, result_type="expand")
@@ -75,13 +76,13 @@ class YahooBarsPage(YahooTechnicalPage, register=Variables.Technicals.BARS):
         return dataframe
 
 
-class YahooTechnicalDownloader(Logging, Sizing, Emptying, Separating):
+class YahooTechnicalDownloader(Logging, Sizing, Emptying):
     def __init__(self, *args, technical=Variables.Technicals.BARS, **kwargs):
         assert technical in list(Variables.Technicals)
         try: super().__init__(*args, **kwargs)
         except TypeError: super().__init__()
-        self.page = YahooTechnicalPage[technical](*args, **kwargs)
-        self.query = Querys.Symbol
+        self.__page = YahooTechnicalPage[technical](*args, **kwargs)
+        self.__query = Querys.Symbol
 
     def execute(self, symbol, *args, dates, **kwargs):
         if symbol is None: return
@@ -98,6 +99,11 @@ class YahooTechnicalDownloader(Logging, Sizing, Emptying, Separating):
         bars = self.page(ticker=ticker, dates=dates)
         assert isinstance(bars, pd.DataFrame)
         return bars
+
+    @property
+    def query(self): return self.__query
+    @property
+    def page(self): return self.__page
 
 
 
