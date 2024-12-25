@@ -32,7 +32,7 @@ class YahooTechnicalParsers(object):
 
 class YahooTechnicalURL(WebURL, domain="https://finance.yahoo.com"):
     @staticmethod
-    def path(*args, technical, ticker, **kwargs): return ["quote", f"{str(ticker)}", f"{str(technical)}"]
+    def path(*args, technical, ticker, **kwargs): return ["quote", str(ticker), str(technical)]
     @staticmethod
     def parms(*args, dates, **kwargs):
         start = Datetime.combine(dates.minimum, Datetime.min.time()).timestamp()
