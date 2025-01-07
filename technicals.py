@@ -70,12 +70,12 @@ class YahooTechnicalPage(WebBrowserPage):
         url = YahooTechnicalURL(**parameters)
         self.load(url)
         self.source.pageend()
-        htmldata = YahooTechnicalData[Variables.Technicals.HISTORY](self.source.html)
+        htmldata = YahooTechnicalData[Variables.Technicals.HISTORY](self.source.html, *args, **kwargs)
         technicals = htmldata(**parameters)
         return technicals
 
 
-class YahooTechnicalDownloader(Logging, Sizing, Emptying):
+class YahooTechnicalDownloader(Sizing, Emptying, Logging):
     def __init__(self, *args, technical, **kwargs):
         assert technical in list(Variables.Technicals)
         super().__init__(*args, **kwargs)
