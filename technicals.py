@@ -12,7 +12,7 @@ from datetime import datetime as Datetime
 
 from finance.variables import Querys, Variables
 from webscraping.webpages import WebBrowserPage
-from webscraping.webstatic import WebHTML
+from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
 from support.mixins import Emptying, Sizing, Logging
 from support.meta import RegistryMeta
