@@ -68,9 +68,8 @@ class YahooTechnicalPage(WebBrowserPage):
     def execute(self, *args, technical, ticker, dates, **kwargs):
         parameters = dict(technical=technical, ticker=ticker, dates=dates)
         url = YahooTechnicalURL(**parameters)
-        self.load(url)
-        self.source.pageend()
-        htmldata = YahooTechnicalData[Variables.Technicals.HISTORY](self.source.html, *args, **kwargs)
+        self.load(url).pageend()
+        htmldata = YahooTechnicalData[Variables.Technicals.HISTORY](self.html, *args, **kwargs)
         technicals = htmldata(**parameters)
         return technicals
 
