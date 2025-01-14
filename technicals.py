@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime as Datetime
 
-from finance.variables import Querys, Variables
+from finance.variables import Variables
 from webscraping.webpages import WebBrowserPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
@@ -80,28 +80,24 @@ class YahooTechnicalDownloader(Sizing, Emptying, Logging):
         super().__init__(*args, **kwargs)
         self.__page = YahooTechnicalPage(*args, **kwargs)
         self.__technical = technical
-        self.__query = Querys.Symbol
 
-    def execute(self, symbol, *args, dates, **kwargs):
+    def execute(self, symbol, *args, **kwargs):
         if symbol is None: return
-        symbol = self.query(symbol)
-        parameters = dict(technical=self.technical, ticker=symbol.ticker, dates=dates)
-        technicals = self.download(*args, **parameters, **kwargs)
+        technicals = self.download(*args, **kwargs)
         size = self.size(technicals)
         string = f"Downloaded: {repr(self)}|{str(symbol)}[{int(size):.0f}]"
         self.logger.info(string)
         if self.empty(technicals): return
         return technicals
 
-    def download(self, *args, **kwargs):
-        technicals = self.page(*args, **kwargs)
+    def download(self, symbol, *args, dates, **kwargs):
+        parameters = dict(technical=self.technical, ticker=symbol.ticker, dates=dates)
+        technicals = self.page(*args, **parameters, **kwargs)
         assert isinstance(technicals, pd.DataFrame)
         return technicals
 
     @property
     def technical(self): return self.__technical
-    @property
-    def query(self): return self.__query
     @property
     def page(self): return self.__page
 
