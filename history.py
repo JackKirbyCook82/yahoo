@@ -6,10 +6,10 @@ Created on Fri Apr 19 2024
 
 """
 
-import logging
 import pandas as pd
 from datetime import datetime as Datetime
 
+from finance.variables import Querys
 from webscraping.webpages import WebELMTPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
@@ -20,7 +20,6 @@ __author__ = "Jack Kirby Cook"
 __all__ = []
 __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = "MIT License"
-__logger__ = logging.getLogger(__name__)
 
 
 class YahooBarsURL(WebURL, domain="https://finance.yahoo.com", path=["quote"], parms={"frequency": "1d", "includeAdjustedClose": "true"}):
@@ -34,8 +33,8 @@ class YahooBarsURL(WebURL, domain="https://finance.yahoo.com", path=["quote"], p
 
 
 class YahooBarsData(WebHTML, locator="//article[contains(@class, 'gridLayout')]", multiple=False, optional=False):
-    class Ticker(WebHTML.Text, locator="//section[contains(@class, 'container')]/h1", key="ticker", parser=PARSER): pass
-    class Table(WebHTML.Table, locator="//table[contains(@class, 'table')]", key="table", header=PARSERS):
+    class Ticker(WebHTML.Text, locator="//section[contains(@class, 'container')]/h1", key="ticker", parser=PARSERS.TICKER): pass
+    class Table(WebHTML.Table, locator="//table[contains(@class, 'table')]", key="table", header=PARSERS.BARS):
         @staticmethod
         def parse(dataframe, *args, **kwargs):
             assert isinstance(dataframe, pd.DataFrame)
@@ -54,29 +53,34 @@ class YahooBarsData(WebHTML, locator="//article[contains(@class, 'gridLayout')]"
         return dataframe
 
 
-class YahooBarsPage(WebELMTPage, url=YahooBarsURL, data={(STOCK, BARS): YahooBarsData}):
+class YahooBarsPage(WebELMTPage, url=YahooBarsURL, variable=YahooBarsData):
     pass
 
 
-class YahooBarsDownloader(Sizing, Emptying):
+class YahooBarsDownloader(Sizing, Emptying, title="Downloaded"):
     def __init__(self, *args, **kwargs):
-        self.page = YahooBarsPage(*args, **kwargs)
+        self.__page = YahooBarsPage(*args, **kwargs)
 
-    def execute(self, *args, symbols, dates, **kwargs):
-        assert isinstance(symbols, list)
-        for symbol in iter(symbols):
-            parameters = dict(ticker=symbol.ticker, dates=dates)
-            contents = self.page(*args, **parameters, **kwargs)
-            assert isinstance(contents, dict)
-            for dataset, content in contents.items():
-                string = "|".join(list(map(str, dataset)))
-                size = self.size(contents)
-                string = f"Downloaded: {repr(self)}|{str(string)}|{str(symbol)}[{int(size):.0f}]"
-                __logger__.info(string)
-            if self.empty(contents): continue
-            yield contents
+    def execute(self, symbols, *args, **kwargs):
+        assert isinstance(symbols, (list, Querys.Symbol))
+        assert all([isinstance(symbol, Querys.Symbol) for symbol in symbols]) if isinstance(symbols, list) else True
+        symbols = list(symbols) if isinstance(symbols, list) else [symbols]
+        for symbol in list(symbols):
+            bars = self.download(symbol, *args, **kwargs)
+            size = self.size(bars)
+            string = f"{str(symbol)}[{int(size):.0f}]"
+            self.console(string)
+            if self.empty(bars): continue
+            yield bars
 
+    def download(self, symbol, *args, dates, **kwargs):
+        parameters = dict(ticker=symbol.ticker, dates=dates)
+        bars = self.page(*args, **parameters, **kwargs)
+        assert isinstance(bars, dict)
+        return bars
 
+    @property
+    def page(self): return self.__page
 
 
 
