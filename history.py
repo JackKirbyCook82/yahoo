@@ -6,6 +6,8 @@ Created on Fri Apr 19 2024
 
 """
 
+import regex as re
+import numpy as np
 import pandas as pd
 from datetime import datetime as Datetime
 
@@ -22,6 +24,10 @@ __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = "MIT License"
 
 
+bars_parsers = {key: np.float32 for keys in "open high low close price" for key in str(keys).split(" ")} | {"date": "datetime64[D]", "volume": np.int64}
+ticker_parser = lambda string: re.search(r"\[[A-Z]+\]", string)
+
+
 class YahooBarsURL(WebURL, domain="https://finance.yahoo.com", path=["quote"], parms={"frequency": "1d", "includeAdjustedClose": "true"}):
     @staticmethod
     def path(*args, ticker, **kwargs): return [str(ticker), "history"]
@@ -33,8 +39,8 @@ class YahooBarsURL(WebURL, domain="https://finance.yahoo.com", path=["quote"], p
 
 
 class YahooBarsData(WebHTML, locator="//article[contains(@class, 'gridLayout')]", multiple=False, optional=False):
-    class Ticker(WebHTML.Text, locator="//section[contains(@class, 'container')]/h1", key="ticker", parser=PARSERS.TICKER): pass
-    class Table(WebHTML.Table, locator="//table[contains(@class, 'table')]", key="table", header=PARSERS.BARS):
+    class Ticker(WebHTML.Text, locator="//section[contains(@class, 'container')]/h1", key="ticker", parser=ticker_parser): pass
+    class Table(WebHTML.Table, locator="//table[contains(@class, 'table')]", key="table"):
         @staticmethod
         def parse(dataframe, *args, **kwargs):
             assert isinstance(dataframe, pd.DataFrame)
@@ -49,6 +55,7 @@ class YahooBarsData(WebHTML, locator="//article[contains(@class, 'gridLayout')]"
         contents = super().execute(*args, **kwargs)
         assert isinstance(contents, dict)
         dataframe = contents["table"].sort_values("date", axis=0, ascending=True, inplace=False)
+        dataframe = dataframe.astype(bars_parsers)
         dataframe["ticker"] = contents["ticker"]
         return dataframe
 
