@@ -15,7 +15,7 @@ from finance.variables import Querys
 from webscraping.webpages import WebELMTPage
 from webscraping.webdatas import WebHTML
 from webscraping.weburl import WebURL
-from support.mixins import Emptying, Sizing
+from support.mixins import Emptying, Sizing, Logging
 
 __version__ = "1.0.0"
 __author__ = "Jack Kirby Cook"
@@ -64,8 +64,9 @@ class YahooBarsPage(WebELMTPage, url=YahooBarsURL, variable=YahooBarsData):
     pass
 
 
-class YahooBarsDownloader(Sizing, Emptying, title="Downloaded"):
+class YahooBarsDownloader(Sizing, Emptying, Logging, title="Downloaded"):
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.__page = YahooBarsPage(*args, **kwargs)
 
     def execute(self, symbols, *args, **kwargs):
@@ -75,8 +76,7 @@ class YahooBarsDownloader(Sizing, Emptying, title="Downloaded"):
         for symbol in list(symbols):
             bars = self.download(symbol, *args, **kwargs)
             size = self.size(bars)
-            string = f"{str(symbol)}[{int(size):.0f}]"
-            self.console(string)
+            self.console(f"{str(symbol)}[{int(size):.0f}]")
             if self.empty(bars): continue
             yield bars
 
