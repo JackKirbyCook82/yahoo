@@ -60,7 +60,7 @@ class YahooBarsData(WebHTML, locator="//article[contains(@class, 'gridLayout')]"
         return dataframe
 
 
-class YahooBarsPage(WebELMTPage, url=YahooBarsURL, variable=YahooBarsData):
+class YahooBarsPage(WebELMTPage, url=YahooBarsURL, data=YahooBarsData):
     pass
 
 
