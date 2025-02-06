@@ -24,8 +24,8 @@ __copyright__ = "Copyright 2024, Jack Kirby Cook"
 __license__ = "MIT License"
 
 
-bars_parsers = {key: np.float32 for keys in "open high low close price" for key in str(keys).split(" ")} | {"date": "datetime64[D]", "volume": np.int64}
-ticker_parser = lambda string: re.search(r"\[[A-Z]+\]", string)
+bars_parsers = {key: np.float32 for key in "open high low close price".split(" ")} | {"volume": np.int64}
+ticker_parser = lambda string: re.search("\((?<ticker>[A-Z]+)\)", string).groupdict()["ticker"]
 
 
 class YahooBarsURL(WebURL, domain="https://finance.yahoo.com", path=["quote"], parms={"frequency": "1d", "includeAdjustedClose": "true"}):
@@ -44,8 +44,9 @@ class YahooBarsData(WebHTML, locator="//article[contains(@class, 'gridLayout')]"
         @staticmethod
         def parse(dataframe, *args, **kwargs):
             assert isinstance(dataframe, pd.DataFrame)
-            dataframe.columns = [str(column).lower() for column in dataframe.columns]
-            dataframe = dataframe.rename(columns={"adj close": "adjusted"}, inplace=False)
+            columns = lambda column: str(column).split(" ")[0].lower()
+            dataframe.columns = list(map(columns, dataframe.columns))
+            dataframe = dataframe.rename(columns={"adj": "price"}, inplace=False)
             dividend = ~dataframe["open"].apply(str).str.contains("Dividend")
             split = ~dataframe["open"].apply(str).str.contains("Split")
             dataframe = dataframe[dividend & split]
@@ -54,14 +55,18 @@ class YahooBarsData(WebHTML, locator="//article[contains(@class, 'gridLayout')]"
     def execute(self, *args, **kwargs):
         contents = super().execute(*args, **kwargs)
         assert isinstance(contents, dict)
-        dataframe = contents["table"].sort_values("date", axis=0, ascending=True, inplace=False)
-        dataframe = dataframe.astype(bars_parsers)
+        dataframe = contents["table"].astype(bars_parsers)
+        dataframe["date"] = dataframe["date"].apply(pd.to_datetime)
         dataframe["ticker"] = contents["ticker"]
+        dataframe = dataframe.sort_values("date", axis=0, ascending=True, inplace=False)
         return dataframe
 
 
-class YahooBarsPage(WebELMTPage, url=YahooBarsURL, data=YahooBarsData):
-    pass
+class YahooBarsPage(WebELMTPage, url=YahooBarsURL):
+    def execute(self, *args, **kwargs):
+        data = YahooBarsData(self.html, *args, **kwargs)
+        content = data(*args, **kwargs)
+        return content
 
 
 class YahooBarsDownloader(Sizing, Emptying, Logging, title="Downloaded"):
@@ -83,7 +88,6 @@ class YahooBarsDownloader(Sizing, Emptying, Logging, title="Downloaded"):
     def download(self, symbol, *args, dates, **kwargs):
         parameters = dict(ticker=symbol.ticker, dates=dates)
         bars = self.page(*args, **parameters, **kwargs)
-        assert isinstance(bars, dict)
         return bars
 
     @property
