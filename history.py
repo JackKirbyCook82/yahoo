@@ -64,9 +64,9 @@ class YahooBarsData(WebHTML, locator="//article[contains(@class, 'gridLayout')]"
 
 class YahooBarsPage(WebELMTPage, url=YahooBarsURL):
     def execute(self, *args, **kwargs):
-        data = YahooBarsData(self.html, *args, **kwargs)
-        content = data(*args, **kwargs)
-        return content
+        bars = YahooBarsData(self.html, *args, **kwargs)
+        bars = bars(*args, **kwargs)
+        return bars
 
 
 class YahooBarsDownloader(Sizing, Emptying, Logging, title="Downloaded"):
