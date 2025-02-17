@@ -28,11 +28,11 @@ bars_parsers = {key: np.float32 for key in "open high low close price".split(" "
 ticker_parser = lambda string: re.search("\((?<ticker>[A-Z]+)\)", string).groupdict()["ticker"]
 
 
-class YahooBarsURL(WebURL, domain="https://finance.yahoo.com", path=["quote"], parms={"frequency": "1d", "includeAdjustedClose": "true"}):
+class YahooBarsURL(WebURL, domain="https://finance.yahoo.com", path=["quote"], parameters={"frequency": "1d", "includeAdjustedClose": "true"}):
     @staticmethod
     def path(*args, ticker, **kwargs): return [str(ticker), "history"]
     @staticmethod
-    def parms(*args, dates, **kwargs):
+    def parameters(*args, dates, **kwargs):
         start = Datetime.combine(dates.minimum, Datetime.min.time()).timestamp()
         stop = Datetime.combine(dates.maximum, Datetime.min.time()).timestamp()
         return {"period1": int(start), "period2": int(stop)}
